@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Design Assistant for Photopea</title>
+<style>
+:root{color-scheme:dark;--bg:#17191f;--panel:#222630;--line:#363c49;--txt:#f2f4f8;--muted:#aab2c0;--accent:#5b9cff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.5 system-ui,Arial,sans-serif}
+header{padding:15px 16px;background:#20242d;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0 0 3px}header p{margin:0;color:var(--muted);font-size:12px}
+main{padding:14px;display:grid;gap:13px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+h2{font-size:14px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+button,select,input{font:inherit}
+button{border:1px solid #465064;background:#303746;color:white;border-radius:8px;padding:10px 8px;cursor:pointer;min-height:40px}
+button.primary{background:#2768c5;border-color:#397bd6}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.45;cursor:not-allowed}
+select,input{width:100%;background:#171b23;color:white;border:1px solid #465064;border-radius:8px;padding:9px}
+.field{display:grid;gap:5px;margin-bottom:9px}.field label{font-size:12px;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);margin:8px 0 0}
+#status{padding:10px;border-radius:8px;background:#171b23;border:1px solid var(--line);font-size:12px;color:#cbd5e1}
+footer{padding:0 14px 16px;color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Design Assistant</h1>
+  <p>مساعد التصميم داخل Photopea</p>
+</header>
+<main>
+<section>
+<h2>مقاسات جاهزة — إنشاء ملف جديد</h2>
+<div class="grid">
+<button class="primary" data-size="1080,1080,Instagram Square">Instagram 1080×1080</button>
+<button data-size="1080,1350,Instagram Portrait">Instagram 1080×1350</button>
+<button data-size="1080,1920,Story / Reel">Story / Reel 1080×1920</button>
+<button data-size="1200,628,Facebook Post">Facebook 1200×628</button>
+<button data-size="1280,720,YouTube Thumbnail">YouTube 1280×720</button>
+<button data-size="1920,1080,Full HD">Full HD 1920×1080</button>
+</div>
+<p class="note">سيُنشأ مستند جديد بخلفية شفافة ودقة 72 PPI.</p>
+</section>
+
+<section>
+<h2>تغيير مقاس التصميم الحالي</h2>
+<div class="grid">
+<div class="field"><label for="w">العرض بالبكسل</label><input id="w" type="number" min="1" max="30000" value="1080"></div>
+<div class="field"><label for="h">الارتفاع بالبكسل</label><input id="h" type="number" min="1" max="30000" value="1080"></div>
+</div>
+<button class="primary" id="resize" style="width:100%">تغيير مقاس الصورة الحالية</button>
+<p class="note">يغيّر أبعاد الصورة وطبقاتها معًا. استخدم نسخة من الملف إذا أردت الاحتفاظ بالأصل.</p>
+</section>
+
+<section>
+<h2>أدوات الطبقات</h2>
+<div class="grid">
+<button id="duplicate">تكرار الطبقة المحددة</button>
+<button id="rename">تسمية الطبقة</button>
+<button id="selectAll">تحديد الكل</button>
+<button id="deselect">إلغاء التحديد</button>
+</div>
+</section>
+
+<section>
+<h2>إعدادات مساعدة</h2>
+<div class="field">
+<label for="layerName">اسم الطبقة الجديدة</label>
+<input id="layerName" maxlength="60" value="نسخة التصميم">
+</div>
+<button id="newLayer" style="width:100%">إنشاء طبقة فارغة</button>
+</section>
+
+<div id="status">جاري الاتصال بـ Photopea… افتح الإضافة من داخل Photopea.</div>
+</main>
+<footer>Design Assistant • لا يتم رفع ملفاتك إلى أي خادم. راجع المستند قبل حفظ التغييرات.</footer>
+<script>
+(() => {
+ const status = document.getElementById('status');
+ let ready = false;
+ function say(s){status.textContent=s}
+ function send(script){
+   if(!window.parent || window.parent===window){say('هذه نسخة المعاينة. افتحها من لوحة Plugins داخل Photopea لتنفيذ الأدوات.');return}
+   window.parent.postMessage(script,'*');
+   say('تم إرسال الأمر إلى Photopea. راجع مساحة العمل.');
+ }
+ window.addEventListener('message', e => {
+   if(e.data === 'done'){ready=true;say('متصل بـ Photopea وجاهز.');}
+ });
+ // Photopea sends "done" when the editor is ready.
+ setTimeout(()=>{if(!ready)say('في انتظار Photopea… تأكد أنك فتحت هذه اللوحة من داخل البرنامج.');},1800);
+
+ document.querySelectorAll('[data-size]').forEach(b=>b.addEventListener('click',()=>{
+   const [w,h,n]=b.dataset.size.split(',');
+   send(`app.documents.add(${w}, ${h}, 72, "${n}", NewDocumentMode.RGB, DocumentFill.TRANSPARENT);`);
+ }));
+ document.getElementById('resize').addEventListener('click',()=>{
+   const w=Number(document.getElementById('w').value),h=Number(document.getElementById('h').value);
+   if(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||w>30000||h>30000){say('أدخل عرضًا وارتفاعًا صحيحين بين 1 و30000.');return}
+   send(`if(app.documents.length){app.activeDocument.resizeImage(${w}, ${h});}else{app.echoToOE("افتح مستندًا أولًا");}`);
+ });
+ document.getElementById('duplicate').addEventListener('click',()=>send(`if(app.documents.length){app.activeDocument.activeLayer.duplicate();}else{app.echoToOE("افتح مستندًا أولًا");}`));
+ document.getElementById('rename').addEventListener('click',()=>{
+   const n=document.getElementById('layerName').value.replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+   if(!n){say('اكتب اسمًا للطبقة.');return}
+   send(`if(app.documents.length){app.activeDocument.activeLayer.name="${n}";}else{app.echoToOE("افتح مستندًا أولًا");}`);
+ });
+ document.getElementById('selectAll').addEventListener('click',()=>send(`if(app.documents.length){app.activeDocument.selection.selectAll();}`));
+ document.getElementById('deselect').addEventListener('click',()=>send(`if(app.documents.length){app.activeDocument.selection.deselect();}`));
+ document.getElementById('newLayer').addEventListener('click',()=>{
+   const n=document.getElementById('layerName').value.replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+   send(`if(app.documents.length){var l=app.activeDocument.artLayers.add();l.name="${n||'طبقة جديدة'}";}else{app.echoToOE("افتح مستندًا أولًا");}`);
+ });
+})();
+</script>
+</body>
+</html>
